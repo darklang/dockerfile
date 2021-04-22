@@ -19,7 +19,7 @@
 
 FROM ubuntu:18.04@sha256:3235326357dfb65f1781dbc4df3b834546d8bf914e82cce58e6e6b676e23ce8f as dark-base
 
-ENV FORCE_BUILD 1
+ENV FORCE_BUILD 2
 
 # These are reasonable defaults, and what the dark uid/gid would be if we didn't
 # specify values. By exposing them as build-args, we can set these values to
@@ -209,7 +209,8 @@ ENV ESY__PROJECT=/home/dark/app
 USER postgres
 RUN /etc/init.d/postgresql start && \
     psql --command "CREATE USER dark WITH SUPERUSER PASSWORD 'eapnsdc';" && \
-    createdb -O dark devdb
+    createdb -O dark devdb && \
+    createdb -O dark testdb
 
 # Adjust PostgreSQL configuration so that remote connections to the
 # database are possible.
@@ -278,7 +279,7 @@ RUN pip3 install --no-cache-dir yq yamllint && echo 'PATH=~/.local/bin:$PATH' >>
 ############################
 
 RUN \
-  VERSION=v0.7.1 \
+  VERSION=v0.7.2 \
   && FILENAME=shellcheck-$VERSION.linux.x86_64.tar.xz  \
   && wget -P tmp_install_folder/ https://github.com/koalaman/shellcheck/releases/download/$VERSION/$FILENAME \
   && tar xvf tmp_install_folder/$FILENAME -C tmp_install_folder \
@@ -289,7 +290,7 @@ RUN \
 # Kubeval - for linting k8s files
 ############################
 RUN \
-  VERSION=0.15.0 \
+  VERSION=v0.16.1 \
   && wget -P tmp_install_folder/ https://github.com/instrumenta/kubeval/releases/download/${VERSION}/kubeval-linux-amd64.tar.gz \
   && tar xvf tmp_install_folder/kubeval-linux-amd64.tar.gz -C  tmp_install_folder \
   && sudo cp tmp_install_folder/kubeval /usr/bin/ \
@@ -315,11 +316,11 @@ RUN wget -q https://honeycomb.io/download/honeymarker/linux/honeymarker_1.9_amd6
 # This section was created copying the commands from the 3.1 dockerfiles.
 # https://github.com/dotnet/dotnet-docker/blob/master/src/sdk/3.1/bionic/amd64/Dockerfile
 
-# TODO: switch to 5.0. Note that the 5.0 dockerfules are split among 3
+# TODO: update to latest. Note that the 5.0 dockerfules are split among 3
 # different dockerfile (runtime-deps, runtime, and sdk), see
 # https://github.com/dotnet/dotnet-docker/blob/master/src.
 
-ENV DOTNET_SDK_VERSION=5.0.100 \
+ENV DOTNET_SDK_VERSION=5.0.202 \
      # Skip extraction of XML docs - generally not useful within an
      # image/container - helps performance
     NUGET_XMLDOC_MODE=skip \
@@ -329,7 +330,7 @@ ENV DOTNET_SDK_VERSION=5.0.100 \
     DOTNET_USE_POLLING_FILE_WATCHER=true
 
 RUN curl -SL --output dotnet.tar.gz https://dotnetcli.azureedge.net/dotnet/Sdk/$DOTNET_SDK_VERSION/dotnet-sdk-$DOTNET_SDK_VERSION-linux-x64.tar.gz \
-    && dotnet_sha512='bec37bfb327c45cc01fd843ef93b22b556f753b04724bba501622df124e7e144c303a4d7e931b5dbadbd4f7b39e5adb8f601cb6293e317ad46d8fe7d52aa9a09' \
+    && dotnet_sha512='01ed59f236184987405673d24940d55ce29d830e7dbbc19556fdc03893039e6046712de6f901dc9911047a0dee4fd15319b7e94f8a31df6b981fa35bd93d9838' \
     && echo "$dotnet_sha512 dotnet.tar.gz" | sha512sum -c - \
     && mkdir -p /usr/share/dotnet \
     && tar -ozxf dotnet.tar.gz -C /usr/share/dotnet \
@@ -385,3 +386,7 @@ RUN cargo install cargo-cache --no-default-features --features ci-autoclean
 ENV CARGO_HOME=/home/dark/.cargo
 
 USER dark
+
+RUN sudo apt update && sudo apt install -y lldb htop
+RUN dotnet tool install -g dotnet-sos
+RUN echo "plugin load /home/dark/.dotnet/tools/.store/dotnet-sos/5.0.160202/dotnet-sos/5.0.160202/tools/netcoreapp2.1/any/linux-x64/libsosplugin.so" > ~/.lldbinit
