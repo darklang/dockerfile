@@ -60,7 +60,7 @@ RUN curl -sSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
 RUN curl -sSL https://nginx.org/keys/nginx_signing.key | apt-key add -
 
 
-# We want postgres 9.6, but it is not in ubuntu 18.04
+# We want postgres 9.6, but it is not in ubuntu 20.04
 RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ `lsb_release -cs`-pgdg main" >> /etc/apt/sources.list.d/pgdg.list
 
 RUN echo "deb [arch=amd64] https://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list
@@ -68,8 +68,8 @@ RUN echo "deb [arch=amd64] https://dl.google.com/linux/chrome/deb/ stable main" 
 RUN echo "deb https://nginx.org/packages/ubuntu/ bionic nginx" > /etc/apt/sources.list.d/nginx.list
 
 # Testcafe needs node >= 11
-RUN echo "deb https://deb.nodesource.com/node_13.x focal main" > /etc/apt/sources.list.d/nodesource.list
-RUN echo "deb-src https://deb.nodesource.com/node_13.x focal main" >> /etc/apt/sources.list.d/nodesource.list
+RUN echo "deb https://deb.nodesource.com/node_14.x focal main" > /etc/apt/sources.list.d/nodesource.list
+RUN echo "deb-src https://deb.nodesource.com/node_14.x focal main" >> /etc/apt/sources.list.d/nodesource.list
 
 RUN echo "deb http://packages.cloud.google.com/apt cloud-sdk main" > /etc/apt/sources.list.d/google-cloud-sdk.list
 RUN echo "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list
@@ -113,7 +113,6 @@ RUN DEBIAN_FRONTEND=noninteractive \
       postgresql-9.6 \
       postgresql-client-9.6 \
       postgresql-contrib-9.6 \
-      google-chrome-stable \
       nodejs \
       google-cloud-sdk \
       jq \
@@ -274,6 +273,16 @@ RUN sudo pip3 install -U --no-cache-dir -U crcmod \
 ############################
 RUN sudo pip3 install --no-cache-dir yq yamllint && echo 'PATH=~/.local/bin:$PATH' >> ~/.bashrc
 
+RUN pip3 install git+https://github.com/darklang/watchgod.git@5bf4f0f3b49bc64f435f59493b0e17e07a20da0d
+# Formatting
+
+RUN pip3 install yapf==0.31.0
+
+####################################
+# CircleCI
+####################################
+RUN curl -fLSs https://raw.githubusercontent.com/CircleCI-Public/circleci-cli/master/install.sh | sudo bash
+
 ############################
 # Shellcheck
 # Ubuntu has a very old version
@@ -319,7 +328,7 @@ RUN wget -q https://honeycomb.io/download/honeymarker/linux/honeymarker_1.9_amd6
 # (runtime-deps, runtime, and sdk), see
 # https://github.com/dotnet/dotnet-docker/blob/master/src
 
-ENV DOTNET_SDK_VERSION=6.0.100-rc.2.21460.33 \
+ENV DOTNET_SDK_VERSION=6.0.100-rc.1.21417.9 \
     # Skip extraction of XML docs - generally not useful within an
     # image/container - helps performance
     NUGET_XMLDOC_MODE=skip \
@@ -332,9 +341,9 @@ ENV DOTNET_SDK_VERSION=6.0.100-rc.2.21460.33 \
     # Enable correct mode for dotnet watch (only mode supported in a container)
     DOTNET_USE_POLLING_FILE_WATCHER=true
 
-#RUN curl -SL --output dotnet.tar.gz https://storage.googleapis.com/dotnet6-rc1/dotnet-sdk-linux-x64.tar.gz \
-RUN curl -SL --output dotnet.tar.gz https://dotnetcli.azureedge.net/dotnet/Sdk/$DOTNET_SDK_VERSION/dotnet-sdk-$DOTNET_SDK_VERSION-linux-x64.tar.gz \
-    && dotnet_sha512='66FCB9E11B5958D554C9744BDA402F52499B9BF6A6AF28F4E1541359F1A473EC5A05F3921663FF1C76E69C6EC89B18D282A79A71653130A1C1BA32DFB6E1C821' \
+#RUN curl -SL --output dotnet.tar.gz https://dotnetcli.azureedge.net/dotnet/Sdk/$DOTNET_SDK_VERSION/dotnet-sdk-$DOTNET_SDK_VERSION-linux-x64.tar.gz \
+RUN curl -SL --output dotnet.tar.gz https://storage.googleapis.com/dotnet6-rc1/dotnet-sdk-linux-x64.tar.gz \
+    && dotnet_sha512='6A93D9F092D8DC3FE1FFFE784028D6C4BA62868C8AF64F97BA403242F9360C772F6A32A907BE580561FB0EFF901640B9895076E000F53A1CA4250CD16F1AB1B2' \
     && echo "$dotnet_sha512 dotnet.tar.gz" | sha512sum -c - \
     && sudo mkdir -p /usr/share/dotnet \
     && sudo tar -C /usr/share/dotnet -oxzf dotnet.tar.gz . \
@@ -343,11 +352,6 @@ RUN curl -SL --output dotnet.tar.gz https://dotnetcli.azureedge.net/dotnet/Sdk/$
     && sudo ln -s /usr/share/dotnet/dotnet /usr/bin/dotnet \
     && dotnet help
 
-# Blazor RunAOTCompilation support
-RUN sudo dotnet workload install \
-      -s https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet6/nuget/v3/index.json \
-      -s https://pkgs.dev.azure.com/azure-public/vside/_packaging/xamarin-impl/nuget/v3/index.json \
-      wasm-tools
 RUN dotnet tool install -g dotnet-sos
 # TODO: is this the right directory?
 RUN echo "plugin load /home/dark/.dotnet/tools/.store/dotnet-sos/5.0.160202/dotnet-sos/5.0.160202/tools/netcoreapp2.1/any/linux-x64/libsosplugin.so" > ~/.lldbinit
@@ -387,9 +391,6 @@ RUN mkdir -p app/containers/queue-scheduler/target
 RUN mkdir -p app/fsharp-backend/Build
 RUN mkdir -p .cargo
 
-RUN pip3 install git+https://github.com/darklang/watchgod.git@5bf4f0f3b49bc64f435f59493b0e17e07a20da0d
-#RUN sudo chown -R dark:dark /home/dark/.config/configstore/update-notifier-npm.json
-
 RUN mkdir -p \
       /home/dark/.vscode-server/extensions \
       /home/dark/.vscode-server-insiders/extensions \
@@ -425,3 +426,4 @@ USER dark
 # Once we have cargo and things installed in /usr/local/cargo and that added to PATH,
 # reset CARGO_HOME so that we can use it as a project cache directory like normal.
 ENV CARGO_HOME=/home/dark/.cargo
+
