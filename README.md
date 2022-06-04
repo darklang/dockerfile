@@ -14,6 +14,6 @@ If you update this repo and push, the tag(s) will be automatically derived from
 the current git hash - see `tag-version.sh`.
 
 To use in CI, you'll then go to the darklang/dark repo's `.circleci/config.yaml`
-and update `.executors | .[] | .docker.image` for the `in-container` and
-`in-rust-container` executors.
+and update `.executors | .[] | .docker.image` for the `in-container` 
+executor.
 
