@@ -2,8 +2,8 @@ version: 2.1
 
 jobs:
   build:
-    docker:
-      - image: cimg/base:2022.04
+    machine:
+      image: ubuntu-2004:current
     environment:
       TAG: darklang/dark-base
     steps:
