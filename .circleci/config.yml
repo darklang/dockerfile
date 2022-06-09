@@ -3,18 +3,11 @@ version: 2.1
 jobs:
   build:
     machine:
-      image: ubuntu-2004:current
+      image: ubuntu-2204:current
     environment:
       TAG: darklang/dark-base
     steps:
       - checkout
-      - setup_remote_docker: { docker_layer_caching: true }
-      # Save the docker env: type .docker-env when sshing in, then you can
-      # use ./scripts/run-in-docker
-      - run:
-          name: Setup docker-env for debugging
-          command: env | grep 'DOCKER\|NO_PROXY' | sed 's/^/export /' > ../docker-env
-
       - run: echo "Building images for version $(./tag-version.sh)."
       - run: docker build --target dark-base -t $TAG:$(./tag-version.sh) .
       - deploy:
