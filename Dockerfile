@@ -15,7 +15,7 @@
 # as part of that build. Search for DOCKERFILE_REPO for where to make that
 # change.
 
-FROM ubuntu:22.04@sha256:bace9fb0d5923a675c894d5c815da75ffe35e24970166a48a4460a48ae6e0d19 as dark-base
+FROM ubuntu:20.04@sha256:e722c7335fdd0ce77044ab5942cb1fbd2b5f60d1f5416acfcdb0814b2baf7898 as dark-base
 
 ENV FORCE_BUILD 3
 
@@ -58,21 +58,21 @@ RUN curl -sSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
 RUN curl -sSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
 RUN curl -sSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
 RUN curl -sSL https://nginx.org/keys/nginx_signing.key | apt-key add -
-RUN curl https://baltocdn.com/helm/signing.asc | gpg --dearmor | tee /usr/share/keyrings/helm.gpg > /dev/null
+RUN curl -sSL https://baltocdn.com/helm/signing.asc | apt-key add -
 
 
 # We want postgres 9.6, but it is not in ubuntu 20.04
 RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ `lsb_release -cs`-pgdg main" >> /etc/apt/sources.list.d/pgdg.list
 
-RUN echo "deb https://nginx.org/packages/ubuntu/ jammy nginx" > /etc/apt/sources.list.d/nginx.list
+RUN echo "deb https://nginx.org/packages/ubuntu/ bionic nginx" > /etc/apt/sources.list.d/nginx.list
 
-RUN echo "deb https://deb.nodesource.com/node_14.x jammy main" > /etc/apt/sources.list.d/nodesource.list
-RUN echo "deb-src https://deb.nodesource.com/node_14.x jammy main" >> /etc/apt/sources.list.d/nodesource.list
+RUN echo "deb https://deb.nodesource.com/node_14.x focal main" > /etc/apt/sources.list.d/nodesource.list
+RUN echo "deb-src https://deb.nodesource.com/node_14.x focal main" >> /etc/apt/sources.list.d/nodesource.list
 
 RUN echo "deb http://packages.cloud.google.com/apt cloud-sdk main" > /etc/apt/sources.list.d/google-cloud-sdk.list
 RUN echo "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list
 
-RUN echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main" | tee /etc/apt/sources.list.d/helm-stable-debian.list
+RUN echo "deb https://baltocdn.com/helm/stable/debian/ all main" > /etc/apt/sources.list.d/helm-stable-debian.list
 
 # Mostly, we use the generic version. However, for things in production we want
 # to pin the exact package version so that we don't have any surprises.  As a
@@ -137,7 +137,7 @@ RUN DEBIAN_FRONTEND=noninteractive \
       pv \
       htop \
       net-tools \
-      nginx \
+      nginx=1.16.1-1~bionic \
       bash-completion \
       texinfo \
       openssh-server \
@@ -146,19 +146,14 @@ RUN DEBIAN_FRONTEND=noninteractive \
       libc6 \
       libgcc1 \
       libgssapi-krb5-2 \
-      libicu70 \
+      libicu66 \
+      libssl1.1 \
       libstdc++6 \
       zlib1g \
       lldb \
       # end .NET dependencies
       && apt clean \
       && rm -rf /var/lib/apt/lists/*
-
-# CLEANUP
-# OCaml only support libssl1.1 at the moment, but the ubuntu ships with libssl3
-# (which .net should be fine with)
-RUN curl http://security.debian.org/debian-security/pool/updates/main/o/openssl/libssl1.1_1.1.0l-1~deb9u6_amd64.deb -o libssl1.1.1.deb -s \
-      && sudo dpkg -i libssl1.1.1.deb
 
 ############################
 # Dark user
@@ -188,7 +183,7 @@ ENV LC_ALL en_US.UTF-8
 ############################
 # Frontend
 ############################
-RUN sudo npm install -g prettier@2.5.1
+RUN sudo npm install -g prettier@2.7.1
 
 # Esy is currently a nightmare. Upgrading to esy 6.6 is stalled because:
 # - esy 6.6 copies from ~/.esy to _esy, and in our container, that copy is
@@ -263,29 +258,18 @@ ENV PUBSUB_EMULATOR_HOST=0.0.0.0:8085
 
 # GKE
 ENV USE_GKE_GCLOUD_AUTH_PLUGIN=True
-
-# crcmod for gsutil; this gets us the compiled (faster), not pure Python
-# (slower) crcmod, as described in `gsutil help crcmod`
-#
-# It requires that python3-pip, python3-dev, python3-setuptools, and gcc be
-# installed. You'll also need CLOUDSDK_PYTHON=python3 to be set when you use
-# gsutil. (Which the ENV line handles.)
-#
-# The last line greps to confirm that gsutil has a compiled crcmod.
-# Possible failure modes; missing deps above (-pip, -dev, -setuptools, gcc); a
-# pre-installed crcmod that needs to be uninstalled first.  Added that because
-# this install is a bit brittle, and it's easy to invisibly install the pure
-# Python crcmod.
 ENV CLOUDSDK_PYTHON=python3
-RUN sudo pip3 install -U --no-cache-dir -U crcmod \
-  && ((gsutil version -l | grep compiled.crcmod:.True) \
-      || (echo "Compiled crcmod not installed." && false))
 
 ############################
 # Pip packages
 ############################
-RUN sudo pip3 install --no-cache-dir yq yamllint watchfiles yapf==0.32.0
+RUN sudo pip3 install --no-cache-dir yq yamllint
 ENV PATH "$PATH:/home/dark/.local/bin"
+
+RUN pip3 install git+https://github.com/pbiggar/watchgod.git@b74cd7ec064ebc7b4263dc532c7c97e046002bef
+
+# Formatting
+RUN pip3 install yapf==0.32.0
 
 ####################################
 # CircleCI
@@ -308,7 +292,7 @@ RUN \
 # Kubeconform - for linting k8s files
 ############################
 RUN \
-  VERSION=v0.4.13 \
+  VERSION=v0.4.14 \
   && wget -P tmp_install_folder/ https://github.com/yannh/kubeconform/releases/download/$VERSION/kubeconform-linux-amd64.tar.gz \
   && tar xvf tmp_install_folder/kubeconform-linux-amd64.tar.gz -C  tmp_install_folder \
   && sudo cp tmp_install_folder/kubeconform /usr/bin/ \
@@ -317,10 +301,10 @@ RUN \
 ####################################
 # Honeytail and honeymarker installs
 ####################################
-RUN wget -q https://honeycomb.io/download/honeytail/v1.6.1/honeytail_1.6.1_amd64.deb && \
-      echo 'd099dd50b8446926be7a011eb4b98ed5bf07e5e7a4f9fce8015fe2147492833c  honeytail_1.6.1_amd64.deb' | sha256sum -c && \
-      sudo dpkg -i honeytail_1.6.1_amd64.deb && \
-      rm honeytail_1.6.1_amd64.deb
+RUN wget -q https://honeycomb.io/download/honeytail/v1.8.1/honeytail_1.8.1_amd64.deb && \
+      echo '971ba06886c5436927a17f8494fe518084a385cb9b9b28e541296d658eb5cc8d  honeytail_1.8.1_amd64.deb' | sha256sum -c && \
+      sudo dpkg -i honeytail_1.8.1_amd64.deb && \
+      rm honeytail_1.8.1_amd64.deb
 
 RUN wget -q https://honeycomb.io/download/honeymarker/linux/honeymarker_1.9_amd64.deb && \
       echo '5aa10dd42f4f369c9463a8c8a361e46058339e6273055600ddad50e1bcdf2149  honeymarker_1.9_amd64.deb' | sha256sum -c && \
@@ -371,8 +355,6 @@ ENV PATH "$PATH:/home/dark/bin:/home/dark/.dotnet/tools"
 # tunnel user
 #############
 RUN sudo adduser --disabled-password --gecos '' --gid ${gid} tunnel
-# Remove use_pty as it messes up `su tunnel` commands
-RUN sudo sed -i 's!Defaults\s\+use_pty!!' /etc/sudoers
 
 ############################
 # Environment
