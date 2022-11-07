@@ -51,6 +51,7 @@ RUN DEBIAN_FRONTEND=noninteractive \
       && apt clean \
       && rm -rf /var/lib/apt/lists/*
 
+# Latest NPM (taken from  https://deb.nodesource.com/setup_8.x )
 RUN curl -sSL https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add -
 RUN curl -sSL https://dl.google.com/linux/linux_signing_key.pub | apt-key add -
 RUN curl -sSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
@@ -65,8 +66,8 @@ RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ `lsb_release -cs`-pgdg ma
 
 RUN echo "deb https://nginx.org/packages/ubuntu/ bionic nginx" > /etc/apt/sources.list.d/nginx.list
 
-RUN echo "deb https://deb.nodesource.com/node_18.x focal main" > /etc/apt/sources.list.d/nodesource.list
-RUN echo "deb-src https://deb.nodesource.com/node_18.x focal main" >> /etc/apt/sources.list.d/nodesource.list
+RUN echo "deb https://deb.nodesource.com/node_14.x focal main" > /etc/apt/sources.list.d/nodesource.list
+RUN echo "deb-src https://deb.nodesource.com/node_14.x focal main" >> /etc/apt/sources.list.d/nodesource.list
 
 RUN echo "deb http://packages.cloud.google.com/apt cloud-sdk main" > /etc/apt/sources.list.d/google-cloud-sdk.list
 RUN echo "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list
@@ -163,6 +164,8 @@ RUN groupadd -g ${gid} dark \
 RUN echo "dark:dark" | chpasswd && adduser dark sudo
 RUN sudo chown -R dark:dark /home/dark
 RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+## Although dark should get permissions via sudoers, this failed for one contributor using WSL
+RUN echo 'dark ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
 # From here on in, use Dark as the user for everything and use sudo when necessary
 USER dark
