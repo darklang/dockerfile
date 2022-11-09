@@ -13,9 +13,6 @@ jobs:
       - deploy:
           name: Push image
           command: |
-            if [ "${CIRCLE_BRANCH}" == "main" ]; then
-              docker login --username pbiggar --password "${DOCKER_HUB_TOKEN}"
-              docker push $TAG:$(./tag-version.sh)
-            fi
-
+            docker login --username pbiggar --password "${DOCKER_HUB_TOKEN}"
+            docker push $TAG:$(./tag-version.sh)
 
