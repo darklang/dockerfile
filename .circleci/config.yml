@@ -9,7 +9,7 @@ jobs:
     steps:
       - checkout
       - run: echo "Building images for version $(./tag-version.sh)."
-      - run: docker buildx --target dark-base -t $TAG:$(./tag-version.sh) .
+      - run: docker buildx build --target dark-base -t $TAG:$(./tag-version.sh) .
       - deploy:
           name: Push image
           command: |
