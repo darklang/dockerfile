@@ -159,6 +159,7 @@ RUN <<EOF
 echo 'session required pam_limits.so' >> /etc/pam.d/common-session
 echo 'session required pam_limits.so' >> /etc/pam.d/common-session-noninteractive
 echo 'DefaultLimitNOFILE=1048576' >> /etc/systemd/system.conf
+echo 'DefaultLimitNOFILE=1048576' >> /etc/systemd/user.conf
 
 # Raise Number of File Descriptors
 echo '* soft nofile 1048576' >> /etc/security/limits.conf
