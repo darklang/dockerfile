@@ -163,6 +163,8 @@ echo 'DefaultLimitNOFILE=1048576' >> /etc/systemd/system.conf
 # Raise Number of File Descriptors
 echo '* soft nofile 1048576' >> /etc/security/limits.conf
 echo '* hard nofile 1048576' >> /etc/security/limits.conf
+echo 'root soft nofile 1048576' >> /etc/security/limits.conf
+echo 'root hard nofile 1048576' >> /etc/security/limits.conf
 EOF
 
 ############################
