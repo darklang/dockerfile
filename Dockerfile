@@ -150,25 +150,6 @@ RUN DEBIAN_FRONTEND=noninteractive \
       && rm -rf /var/lib/apt/lists/*
 
 ############################
-# limits - needed for nginx
-############################
-# Lots of guides on how to do this online; this based on
-# https://github.com/actions/runner-images/blob/5dd62e7a08dcaede9085450c86c4643f482f9803/images/linux/scripts/base/limits.sh
-USER root
-RUN <<EOF
-echo 'session required pam_limits.so' >> /etc/pam.d/common-session
-echo 'session required pam_limits.so' >> /etc/pam.d/common-session-noninteractive
-echo 'DefaultLimitNOFILE=1048576' >> /etc/systemd/system.conf
-echo 'DefaultLimitNOFILE=1048576' >> /etc/systemd/user.conf
-
-# Raise Number of File Descriptors
-echo '* soft nofile 1048576' >> /etc/security/limits.conf
-echo '* hard nofile 1048576' >> /etc/security/limits.conf
-echo 'root soft nofile 1048576' >> /etc/security/limits.conf
-echo 'root hard nofile 1048576' >> /etc/security/limits.conf
-EOF
-
-############################
 # Dark user
 ############################
 USER root
