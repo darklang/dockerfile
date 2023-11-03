@@ -58,8 +58,8 @@ RUN DEBIAN_FRONTEND=noninteractive \
       && apt clean \
       && rm -rf /var/lib/apt/lists/*
 
-# Latest NPM (taken from  https://deb.nodesource.com/setup_8.x )
-RUN curl -sSL https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add -
+# Latest NPM (taken from https://deb.nodesource.com)
+RUN curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
 RUN curl -sSL https://dl.google.com/linux/linux_signing_key.pub | apt-key add -
 RUN curl -sSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
 RUN curl -sSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
@@ -68,8 +68,7 @@ RUN curl -sSL https://apt.releases.hashicorp.com/gpg | apt-key add -
 
 RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ `lsb_release -cs`-pgdg main" >> /etc/apt/sources.list.d/pgdg.list
 
-RUN echo "deb https://deb.nodesource.com/node_20.x jammy main" > /etc/apt/sources.list.d/nodesource.list
-RUN echo "deb-src https://deb.nodesource.com/node_20.x jammy main" >> /etc/apt/sources.list.d/nodesource.list
+RUN echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list
 
 RUN echo "deb http://packages.cloud.google.com/apt cloud-sdk main" > /etc/apt/sources.list.d/google-cloud-sdk.list
 RUN echo "deb [arch=${TARGETARCH}] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list
@@ -112,6 +111,7 @@ RUN DEBIAN_FRONTEND=noninteractive \
       vim \
       unzip \
       docker-ce \
+      docker-buildx-plugin \
       python3-pip \
       python3-setuptools \
       python3-dev \
@@ -296,6 +296,16 @@ RUN sudo chown dark:dark /home/dark/install-exe-file
 RUN chmod +x /home/dark/install-exe-file
 
 ############################
+# Cockroach
+############################
+RUN /home/dark/install-targz-file \
+  --arm64-sha256=e64f7dc6c404e01a36c96e6da9ed96d84e3ff8ed66cf02216dcaaec1d192a55b \
+  --amd64-sha256=b233763c48dd97d4c7c76d25054a7cd98edf700aa64466ee40c3909758281045 \
+  --url=https://binaries.cockroachdb.com/cockroach-v23.2.0-alpha.2.linux-${TARGETARCH}.tgz \
+  --extract-file=cockroach-v23.2.0-alpha.2.linux-${TARGETARCH}/cockroach \
+  --target=/usr/bin/cockroach
+
+############################
 # Terraform
 ############################
 RUN /home/dark/install-targz-file \
@@ -418,6 +428,52 @@ RUN git clone https://github.com/emscripten-core/emsdk.git --depth 1 \
   && ./emsdk install latest \
   && ./emsdk activate latest
 ENV PATH "$PATH:/home/dark/emsdk/upstream/emscripten"
+
+
+#############
+# tree-sitter,
+# to P/Invoke with in our Darklang bindings
+#
+# Note: `tree-sitter.so` is moved into the `backend/src/LibTreeSitter` directory in
+# the `_copy-tree-sitter-binary` script, as this docker container doesn't seem to
+# have access the /home/dark directory here.
+#############
+RUN git clone --depth 1 --branch v0.20.8 https://github.com/tree-sitter/tree-sitter.git \
+  && gcc  -fPIC  -shared  -o tree-sitter.so  tree-sitter/lib/src/lib.c  -I tree-sitter/lib/src  -I tree-sitter/lib/src/../include \
+  && rm -rf tree-sitter/
+# TODO: cross-compile for other platforms, when we start releasing `darklang` binaries
+
+
+#############
+# Zig,
+# for (cross-)compiling the `tree-sitter-darklang` parser
+# TODO Occasionally, check https://ziglang.org/download to see if we're using the latest version
+ENV ZIG_VERSION=0.11.0
+ENV ZIG_ARM64_MINISIG="RUSGOq2NVecA2XPwbgbN5SvU46UcCmhhfcfrjVC+YvcwUcjAYfIXQmqE//df1Mes7iyGZvGoy2+PSJ8pog7QGLE+3nvP8gtlSAs="
+ENV ZIG=AMD64_MINISIG="RUSGOq2NVecA2X2did6P61CXthPLZEUwi07GDWQ2MWU58W+asm3v85+PRVHN5SljhdsKoAMmbg4fdyseAcbVZayGaV1Iv6chcgE="
+#############
+RUN set -e; \
+  case ${TARGETARCH} in \
+  arm64) \
+  ZIG_ARCH="aarch64"; \
+  ZIG_MINISIG=$ZIG_ARM64_MINISIG; \
+  ;; \
+  amd64) \
+  ZIG_ARCH="x86_64"; \
+  ZIG_MINISIG=$AMD64_MINISIG; \
+  ;; \
+  *) exit 1;; \
+  esac;  \
+  curl -o zig.tar.xz "https://ziglang.org/download/${ZIG_VERSION}/zig-linux-${ZIG_ARCH}-${ZIG_VERSION}.tar.xz"; \
+  # TODO: verify signature
+  # RUN minisign -Vm zig.tar.xz -P "RWSGOq2NVecA2UPNdBUZykf1CCb147pkmdtYxgb3Ti+JO/wCYvhbAb/U" \
+  #   || (echo "Verification failed!" && exit 1)
+  mkdir ~/zig; \
+  tar -xf zig.tar.xz -C ~/zig; \
+  rm zig.tar.xz; \
+  mv ~/zig/zig-linux-${ZIG_ARCH}-${ZIG_VERSION}/* ~/zig;
+
+ENV PATH "$PATH:~/zig"
 
 ############################
 # Environment
