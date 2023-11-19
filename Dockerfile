@@ -43,20 +43,20 @@ ARG gid=1000
 ############################
 USER root
 RUN DEBIAN_FRONTEND=noninteractive \
-    apt update --allow-releaseinfo-change && \
-    DEBIAN_FRONTEND=noninteractive \
-    apt install \
-      -y \
-      --no-install-recommends \
-      curl \
-      apt-transport-https \
-      ca-certificates \
-      lsb-core \
-      less \
-      gpg \
-      gpg-agent \
-      && apt clean \
-      && rm -rf /var/lib/apt/lists/*
+  apt update --allow-releaseinfo-change && \
+  DEBIAN_FRONTEND=noninteractive \
+  apt install \
+  -y \
+  --no-install-recommends \
+  curl \
+  apt-transport-https \
+  ca-certificates \
+  lsb-core \
+  less \
+  gpg \
+  gpg-agent \
+  && apt clean \
+  && rm -rf /var/lib/apt/lists/*
 
 # Latest NPM (taken from https://deb.nodesource.com)
 RUN curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
@@ -89,64 +89,64 @@ RUN echo "deb https://apt.releases.hashicorp.com $(lsb_release -cs) main" > /etc
 # - apt-transport-https for npm
 # - net-tools for netstat
 RUN DEBIAN_FRONTEND=noninteractive \
-    apt update --allow-releaseinfo-change && \
-    DEBIAN_FRONTEND=noninteractive \
-    apt install \
-      --no-install-recommends \
-      -y \
-      rsync \
-      git \
-      wget \
-      sudo \
-      locales \
-      postgresql-14 \
-      postgresql-client-14 \
-      postgresql-contrib-14 \
-      git-restore-mtime \
-      nodejs \
-      google-cloud-sdk \
-      google-cloud-sdk-pubsub-emulator \
-      google-cloud-sdk-gke-gcloud-auth-plugin \
-      jq \
-      # yugabyte
-      ntp \
-      vim \
-      unzip \
-      docker-ce \
-      docker-buildx-plugin \
-      python3-pip \
-      python3-setuptools \
-      python3-dev \
-      libsodium-dev \
-      libssl-dev \
-      zlib1g-dev \
-      pv \
-      htop \
-      net-tools \
-      bash-completion \
-      openssh-server \
-      dnsutils \
-      # .NET dependencies - https://github.com/dotnet/dotnet-docker/blob/master/src/runtime-deps/3.1/bionic/amd64/Dockerfile
-      libc6 \
-      libgcc1 \
-      libgssapi-krb5-2 \
-      libicu70 \
-      libssl3 \
-      libstdc++6 \
-      zlib1g \
-      # end .NET dependencies
-      # parser (tree-sitter) dependencies
-      build-essential \
-      # end parser dependencies
-      && apt clean \
-      && rm -rf /var/lib/apt/lists/*
+  apt update --allow-releaseinfo-change && \
+  DEBIAN_FRONTEND=noninteractive \
+  apt install \
+  --no-install-recommends \
+  -y \
+  rsync \
+  git \
+  wget \
+  sudo \
+  locales \
+  postgresql-14 \
+  postgresql-client-14 \
+  postgresql-contrib-14 \
+  git-restore-mtime \
+  nodejs \
+  google-cloud-sdk \
+  google-cloud-sdk-pubsub-emulator \
+  google-cloud-sdk-gke-gcloud-auth-plugin \
+  jq \
+  # yugabyte
+  ntp \
+  vim \
+  unzip \
+  docker-ce \
+  docker-buildx-plugin \
+  python3-pip \
+  python3-setuptools \
+  python3-dev \
+  libsodium-dev \
+  libssl-dev \
+  zlib1g-dev \
+  pv \
+  htop \
+  net-tools \
+  bash-completion \
+  openssh-server \
+  dnsutils \
+  # .NET dependencies - https://github.com/dotnet/dotnet-docker/blob/master/src/runtime-deps/3.1/bionic/amd64/Dockerfile
+  libc6 \
+  libgcc1 \
+  libgssapi-krb5-2 \
+  libicu70 \
+  libssl3 \
+  libstdc++6 \
+  zlib1g \
+  # end .NET dependencies
+  # parser (tree-sitter) dependencies
+  build-essential \
+  # end parser dependencies
+  && apt clean \
+  && rm -rf /var/lib/apt/lists/*
 
 ############################
 # Dark user
 ############################
 USER root
 RUN groupadd -g ${gid} dark \
-    && adduser --disabled-password --gecos '' --uid ${uid} --gid ${gid} dark
+  && adduser --disabled-password --gecos '' --uid ${uid} --gid ${gid} dark
 RUN echo "dark:dark" | chpasswd && adduser dark sudo
 RUN sudo chown -R dark:dark /home/dark
 RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
@@ -178,9 +178,9 @@ RUN sudo npm install -g prettier@3.0.2
 ############################
 USER postgres
 RUN /etc/init.d/postgresql start && \
-    psql --command "CREATE USER dark WITH SUPERUSER PASSWORD 'darklang';" && \
-    createdb -O dark devdb && \
-    createdb -O dark testdb
+  psql --command "CREATE USER dark WITH SUPERUSER PASSWORD 'darklang';" && \
+  createdb -O dark devdb && \
+  createdb -O dark testdb
 
 # Adjust PostgreSQL configuration so that remote connections to the
 # database are possible.
@@ -315,13 +315,14 @@ set -e;
 case ${TARGETARCH} in
   arm64)
   ARCH="aarch64";
+  URL=https://downloads.yugabyte.com/releases/2.20.0.0/yugabyte-2.20.0.0-b76-el8-${ARCH}.tar.gz
   ;;
   amd64)
   ARCH="x86_64";
+  URL=https://downloads.yugabyte.com/releases/2.20.0.0/yugabyte-2.20.0.0-b76-linux-x86_64.tar.gz
   ;;
   *) exit 1 ;;
 esac
-URL=https://downloads.yugabyte.com/releases/2.20.0.0/yugabyte-2.20.0.0-b76-el8-${ARCH}.tar.gz
 FILENAME=$(basename $URL)
 DIR=~/yugabyte
 mkdir -p $DIR
@@ -375,10 +376,10 @@ RUN curl -fLSs https://raw.githubusercontent.com/CircleCI-Public/circleci-cli/ma
 RUN \
   VERSION=v0.9.0 \
   && case ${TARGETARCH} in \
-       arm64) FILENAME=shellcheck-$VERSION.linux.aarch64.tar.xz;; \
-       amd64) FILENAME=shellcheck-$VERSION.linux.x86_64.tar.xz;; \
-       *) exit 1;; \
-     esac \
+  arm64) FILENAME=shellcheck-$VERSION.linux.aarch64.tar.xz;; \
+  amd64) FILENAME=shellcheck-$VERSION.linux.x86_64.tar.xz;; \
+  *) exit 1;; \
+  esac \
   && /home/dark/install-targz-file \
   --arm64-sha256=179c579ef3481317d130adebede74a34dbbc2df961a70916dd4039ebf0735fae \
   --amd64-sha256=700324c6dd0ebea0117591c6cc9d7350d9c7c5c287acbad7630fa17b1d4d9e2f \
@@ -407,17 +408,17 @@ RUN /home/dark/install-exe-file \
 # https://github.com/dotnet/dotnet-docker/blob/master/src
 
 ENV DOTNET_SDK_VERSION=8.0.100 \
-    # Skip extraction of XML docs - generally not useful within an
-    # image/container - helps performance
-    NUGET_XMLDOC_MODE=skip \
-    # Enable detection of running in a container
-    DOTNET_RUNNING_IN_CONTAINER=true \
-    # Do not generate certificate
-    DOTNET_GENERATE_ASPNET_CERTIFICATE=false \
-    # Do not show first run text
-    DOTNET_NOLOGO=true \
-    # Enable correct mode for dotnet watch (only mode supported in a container)
-    DOTNET_USE_POLLING_FILE_WATCHER=true
+  # Skip extraction of XML docs - generally not useful within an
+  # image/container - helps performance
+  NUGET_XMLDOC_MODE=skip \
+  # Enable detection of running in a container
+  DOTNET_RUNNING_IN_CONTAINER=true \
+  # Do not generate certificate
+  DOTNET_GENERATE_ASPNET_CERTIFICATE=false \
+  # Do not show first run text
+  DOTNET_NOLOGO=true \
+  # Enable correct mode for dotnet watch (only mode supported in a container)
+  DOTNET_USE_POLLING_FILE_WATCHER=true
 
 RUN <<EOF
 set -e
