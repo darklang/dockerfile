@@ -375,6 +375,16 @@ RUN set -e; \
 
 ENV PATH "$PATH:~/zig"
 
+
+############################
+# VSCE, used for publishing VS Code extension
+#
+# TODO reassess whether this should be done here,
+#   or in `publish-vs-code-extension`.
+############################
+RUN sudo npm install -g @vscode/vsce
+
+
 ############################
 # Environment
 ############################
@@ -389,6 +399,7 @@ USER dark
 RUN touch .bash_history
 RUN mkdir -p .config/gcloud
 RUN mkdir -p .config/configstore
+RUN mkdir -p .terraform.d/
 RUN mkdir -p app
 RUN mkdir -p app/backend/Build
 
