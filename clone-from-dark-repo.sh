@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# run like
+# ./clone-from-dark-repo.sh "../dark"
+
 set -euo pipefail
 
 set -x 
