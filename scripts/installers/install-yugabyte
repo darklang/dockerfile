@@ -29,9 +29,7 @@ FILENAME=$(basename $URL)
 DIR=/home/dark/yugabyte
 mkdir -p $DIR
 cd $DIR
-echo $URL
-curl -sSL -f -o $FILENAME $URL
-file "$FILENAME"
+curl -sSL -o $FILENAME $URL
 tar xvf $FILENAME --strip-components=1
 rm $FILENAME
 ./bin/post_install.sh
