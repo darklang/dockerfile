@@ -113,9 +113,10 @@ RUN DEBIAN_FRONTEND=noninteractive \
       libstdc++6 \
       zlib1g \
       # end .NET dependencies
-      # parser (tree-sitter) dependencies
-      build-essential \
-      # end parser dependencies
+      # NativeAOT builds (`scripts/build/build-release-cli-exes.sh --aot`) need
+      # gcc as the platform linker. It also brings in binutils, whose objcopy
+      # strips symbols.
+      gcc \
       psmisc \
       # CLI integration tests
       expect \
@@ -219,10 +220,13 @@ ENV NUGET_XMLDOC_MODE=skip \
     # Enable correct mode for dotnet watch (only mode supported in a container)
     DOTNET_USE_POLLING_FILE_WATCHER=true
 
-RUN /home/dark/install-dotnet10 \
+RUN /home/dark/install-dotnet \
   --version=10.0.102 \
   --arm64-sha256=1254141153d29b5b926e0e7b0b172a25f9c096b8ed6a182f54062c5e0b41384b30e10e2bf1ebe86ed0f58f4ff762203acd83bcf23fefb59c07af45332d794700 \
   --amd64-sha256=7adf40e8e5547970391cfbe474c3874c6918ce3575ac398f376c78502134e1c8a2fa3da9aca281fdaeda81671f56c851ebe9e74c5b57c5a298bd45deba63565d
+
+# WebAssembly build tools, for the browser REPL (backend/src/Wasm).
+RUN sudo dotnet workload install wasm-tools --version 10.0.109.1
 
 # formatting
 RUN dotnet tool install fantomas --version 6.2.3 -g
@@ -232,23 +236,8 @@ ENV PATH="$PATH:/home/dark/bin:/home/dark/.dotnet/tools"
 ENV NUGET_SCRATCH=/tmp/NuGetScratch
 
 #############
-# Emscripten,
-# for compiling the tree-sitter parser to wasm
-#############
-# RUN git clone https://github.com/emscripten-core/emsdk.git --depth 1 \
-#   && cd emsdk \
-#   # TODO pin to a recent stable version (i.e. 3.1.37)
-#   # we are using the latest version because Linux arm64 binaries aren't available in all releases.
-#   # see: https://github.com/emscripten-core/emscripten/issues/19275
-#   && ./emsdk install latest \
-#   && ./emsdk activate latest
-# ENV PATH="$PATH:/home/dark/emsdk/upstream/emscripten"
-
-
-#############
 # Zig,
-# for (cross-)compiling our `tree-sitter-darklang` parser,
-# along with the `tree-sitter` library itself.
+# for cross-compiling native libraries (e.g. SQLite) for the release CLIs.
 # TODO Occasionally, check https://ziglang.org/download to see if we're using the latest version
 ENV ZIG_VERSION=0.11.0
 ENV ZIG_ARM64_MINISIG="RUSGOq2NVecA2XPwbgbN5SvU46UcCmhhfcfrjVC+YvcwUcjAYfIXQmqE//df1Mes7iyGZvGoy2+PSJ8pog7QGLE+3nvP8gtlSAs="
@@ -275,7 +264,7 @@ RUN set -e; \
   rm zig.tar.xz; \
   mv ~/zig/zig-linux-${ZIG_ARCH}-${ZIG_VERSION}/* ~/zig;
 
-ENV PATH="$PATH:~/zig"
+ENV PATH="$PATH:/home/dark/zig"
 
 
 ############################
