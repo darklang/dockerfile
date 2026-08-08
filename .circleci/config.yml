@@ -6,16 +6,21 @@ jobs:
       image: ubuntu-2204:current
     environment:
       TAG: darklang/dark-base
+      # Where release artifacts get built. On an older Ubuntu than dark-base on
+      # purpose: an AOT binary inherits its glibc floor from the build machine.
+      BUILD_TAG: darklang/dark-build-base
     steps:
       - checkout
       - run: echo "Building images for version $(./tag-version.sh)."
       - run: docker buildx build --target dark-base -t $TAG:$(./tag-version.sh) .
+      - run: docker buildx build -f Dockerfile.build-base -t $BUILD_TAG:$(./tag-version.sh) .
       - deploy:
-          name: Push image
+          name: Push images
           command: |
             if [ "${CIRCLE_BRANCH}" == "main" ]; then
               docker login --username pbiggar --password "${DOCKER_HUB_TOKEN}"
               docker push $TAG:$(./tag-version.sh)
+              docker push $BUILD_TAG:$(./tag-version.sh)
             fi
 
 

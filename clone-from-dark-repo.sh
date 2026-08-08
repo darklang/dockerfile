@@ -12,4 +12,5 @@ dir=$1
 mkdir -p scripts/installers
 
 cp "$dir"/Dockerfile ./
+cp "$dir"/Dockerfile.build-base ./
 cp "$dir"/scripts/installers/* scripts/installers/
